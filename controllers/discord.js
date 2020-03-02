@@ -2,7 +2,7 @@ const fetch = require('node-fetch')
 const FormData = require('form-data')
 const { JWT, JWK } = require('jose')
 
-const { User, DiscordUser, DiscordToken } = require('../models')
+const { User } = require('../models')
 
 async function auth (ctx) {
   const accessCode = ctx.request.query.code
@@ -22,7 +22,7 @@ async function auth (ctx) {
   })
 
   if (oAuthTokenResponse.status !== 200) {
-    ctx.throw(oAuthTokenResponse.status, `Discord return ${oAuthTokenResponse.statusText} on token request`)
+    ctx.throw(oAuthTokenResponse.status, `Discord return "${oAuthTokenResponse.statusText}" on token request`)
   }
   const oAuthTokenJson = await oAuthTokenResponse.json()
 
@@ -32,33 +32,31 @@ async function auth (ctx) {
       authorization: `${oAuthTokenJson.token_type} ${oAuthTokenJson.access_token}`
     }
   })
-  const discordUserJson = await discordUserResponse.json()
 
   if (discordUserResponse.status !== 200) {
-    ctx.throw(discordUserResponse.status, `Discord return ${discordUserResponse.statusText} on user request`)
+    ctx.throw(discordUserResponse.status, `Discord return "${discordUserResponse.statusText}" on user request`)
   }
 
-  if (discordUserJson.username === undefined || discordUserJson.id === undefined) {
-    ctx.throw(400, 'Discord return an empty user')
+  const discordUserJson = await discordUserResponse.json()
+  if (discordUserJson.email === undefined || discordUserJson.id === undefined) {
+    ctx.throw(400, 'Discord return an empty user email or id')
   }
 
   /** Insert user in DB if new **/
-  const discordUser = await DiscordUser.findOne({ discordId: discordUserJson.id })
-  let userId
-  if (discordUser === null) {
-    const user = await new User({ username: discordUserJson.username }).save()
-    await new DiscordUser({ discordId: discordUserJson.id, userId: user._id }).save()
-    userId = user._id
-  } else {
-    userId = discordUser.userId
+  let user = await User.findOne({ discordId: discordUserJson.id })
+  if (user === null) {
+    user = await User.findOne({ email: discordUserJson.email })
+    if (user === null) {
+      user = await new User({ email: discordUserJson.email, discordId: discordUserJson.id }).save()
+    } else {
+      user.discordId = discordUserJson.id
+      await user.save()
+    }
   }
-
-  await DiscordToken.deleteMany({ userId: userId })
-  await new DiscordToken({ userId: userId, access_token: oAuthTokenJson.access_token, expires_in: oAuthTokenJson.expires_in, refresh_token: oAuthTokenJson.refresh_token, scope: oAuthTokenJson.scope, token_type: oAuthTokenJson.token_type }).save()
 
   /** Generate JWT **/
   const key = JWK.asKey(process.env.JWT_SECRET)
-  const token = JWT.sign({ id: userId }, key, {
+  const token = JWT.sign({ id: user._id }, key, {
     expiresIn: '24 hours',
     header: {
       typ: 'JWT'

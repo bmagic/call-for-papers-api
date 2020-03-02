@@ -5,7 +5,7 @@ async function getTalks (ctx) {
   ctx.ok(talks)
 }
 
-async function addTalk (ctx) {
+async function createTalk (ctx) {
   if (ctx.request.body && ctx.request.body.name) {
     await new Talk({ userId: ctx.user.id, name: ctx.request.body.name }).save()
     ctx.ok(204)
@@ -30,6 +30,6 @@ async function deleteTalk (ctx) {
 
 module.exports = {
   getTalks,
-  addTalk,
+  createTalk,
   deleteTalk
 }

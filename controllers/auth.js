@@ -21,5 +21,5 @@ async function authorize (ctx, next) {
 }
 
 module.exports = {
-  authorize
+  authorize,
 }
