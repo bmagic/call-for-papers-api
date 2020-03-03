@@ -21,7 +21,6 @@ app.use(BodyParser({
   jsonLimit: '5mb',
   strict: true,
   onerror: function (err, ctx) {
-    console.log(err)
     ctx.throw('body parse error', 422)
   }
 }))

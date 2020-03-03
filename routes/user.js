@@ -3,8 +3,10 @@ const router = new Router()
 const User = require('../controllers/user')
 const Auth = require('../controllers/auth')
 
-router.get('/', Auth.authorize, User.getUser)
-router.post('/register', User.createUser)
+router.get('/', Auth.authenticate, User.getUser)
+router.post('/register', User.register)
 router.post('/login', User.login)
-
+router.get('/talks', Auth.authenticate, User.getTalks)
+router.post('/talks', Auth.authenticate, User.createTalk)
+router.del('/:id', Auth.authenticate, User.deleteTalk)
 module.exports = router.routes()

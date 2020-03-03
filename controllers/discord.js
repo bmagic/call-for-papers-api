@@ -1,7 +1,6 @@
 const fetch = require('node-fetch')
 const FormData = require('form-data')
-const { JWT, JWK } = require('jose')
-
+const { generateJWT } = require('../lib/jwt')
 const { User } = require('../models')
 
 async function auth (ctx) {
@@ -13,7 +12,7 @@ async function auth (ctx) {
   data.append('client_secret', process.env.DISCORD_CLIENT_SECRET)
   data.append('grant_type', 'authorization_code')
   data.append('redirect_uri', process.env.DISCORD_REDIRECT_URI)
-  data.append('scope', 'identify')
+  data.append('scope', 'email')
   data.append('code', accessCode)
 
   const oAuthTokenResponse = await fetch('https://discordapp.com/api/oauth2/token', {
@@ -55,13 +54,7 @@ async function auth (ctx) {
   }
 
   /** Generate JWT **/
-  const key = JWK.asKey(process.env.JWT_SECRET)
-  const token = JWT.sign({ id: user._id }, key, {
-    expiresIn: '24 hours',
-    header: {
-      typ: 'JWT'
-    }
-  })
+  const token = generateJWT({ id: user._id, roles: user.roles })
 
   ctx.ok({ token: token })
 }

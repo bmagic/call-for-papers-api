@@ -1,17 +1,16 @@
-const { JWT, JWK } = require('jose')
-
-async function authorize (ctx, next) {
+const { validateJWT } = require('../lib/jwt')
+async function authenticate (ctx, next, role) {
   if (ctx.headers.authorization) {
-    const key = JWK.asKey(process.env.JWT_SECRET)
+    const token = ctx.headers.authorization.split(' ')[1]
 
-    const jwt = ctx.headers.authorization.split(' ')[1]
     try {
-      const result = JWT.verify(
-        jwt,
-        key,
-        { clockTolerance: '1 min' }
-      )
-      ctx.user = { id: result.id }
+      const data = validateJWT(token)
+      ctx.user = data
+
+      if (role && data.roles && !data.roles.includes(role)) {
+        ctx.throw(401)
+      }
+
       return next()
     } catch (e) {
       ctx.throw(401, `JWT error : ${e.message}`)
@@ -21,5 +20,5 @@ async function authorize (ctx, next) {
 }
 
 module.exports = {
-  authorize,
+  authenticate
 }

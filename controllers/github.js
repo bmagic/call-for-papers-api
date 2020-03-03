@@ -1,5 +1,5 @@
 const fetch = require('node-fetch')
-const { JWT, JWK } = require('jose')
+const { generateJWT } = require('../lib/jwt')
 
 const { User } = require('../models')
 
@@ -72,13 +72,7 @@ async function auth (ctx) {
   }
 
   /** Generate JWT **/
-  const key = JWK.asKey(process.env.JWT_SECRET)
-  const token = JWT.sign({ id: user._id }, key, {
-    expiresIn: '24 hours',
-    header: {
-      typ: 'JWT'
-    }
-  })
+  const token = generateJWT({ id: user._id, roles: user.roles })
 
   ctx.ok({ token: token })
 }
